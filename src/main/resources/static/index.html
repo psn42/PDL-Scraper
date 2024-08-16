@@ -45,6 +45,46 @@
         button:hover {
             background-color: #0056b3;
         }
+
+        #progressContainer {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #progressBar {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #progressFill {
+            width: 0;
+            height: 10px;
+            background-color: #007bff;
+            border-radius: 4px;
+        }
+
+        #progressText {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        #downloadButton {
+            display: none;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #downloadButton:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -52,18 +92,52 @@
         <h1>PDF Converter</h1>
         <form id="pdfForm">
             <input type="text" id="urlInput" placeholder="Enter URL" required>
-            <button type="submit">Convert to PDF</button>
+            <button id="convertButton" type="submit">Convert to PDF</button>
         </form>
-        <div id="downloadSection" style="display: none;">
-            <button id="downloadButton">Download PDF</button>
+        <div id="progressContainer">
+            <div id="progressBar">
+                <div id="progressFill"></div>
+            </div>
+            <div id="progressText">Waiting for conversion to start...</div>
         </div>
+        <button id="downloadButton">Download PDF</button>
     </div>
 
     <script>
+        const convertButton = document.getElementById('convertButton');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const downloadButton = document.getElementById('downloadButton');
+        let pdfBlob;
+
         document.getElementById('pdfForm').addEventListener('submit', function(event) {
             event.preventDefault();
 
             const url = document.getElementById('urlInput').value;
+
+            convertButton.disabled = true;
+            progressContainer.style.display = 'block';
+            downloadButton.style.display = 'none';
+
+            // Start listening to progress updates
+            const eventSource = new EventSource('/progress');
+            eventSource.onmessage = function(event) {
+                const message = event.data;
+                const [text, currentPage, of, totalPages] = message.split(' ');
+                const progressPercentage = (parseInt(currentPage) / parseInt(totalPages)) * 100;
+
+                progressFill.style.width = progressPercentage + '%';
+                progressText.innerText = message;
+
+                if (parseInt(currentPage) === parseInt(totalPages)) {
+                    eventSource.close();
+                    progressText.innerText += ' - Conversion complete!';
+                    downloadButton.style.display = 'block';
+                }
+            };
+
+            // Start the conversion process
             fetch('/convert', {
                 method: 'POST',
                 headers: {
@@ -71,43 +145,27 @@
                 },
                 body: new URLSearchParams({ url: url })
             })
-            .then(response => response.json())
-            .then(data => {
-                const downloadSection = document.getElementById('downloadSection');
-                const downloadButton = document.getElementById('downloadButton');
-                downloadSection.style.display = 'block';
-
-                downloadButton.onclick = function() {
-                    const blob = base64ToBlob(data.base64Pdf, 'application/pdf');
-                    const link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = data.name + '.pdf';
-                    link.click();
-                };
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to generate PDF');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                pdfBlob = blob;
             })
             .catch(error => {
                 console.error('Error:', error);
+                convertButton.disabled = false;
             });
         });
 
-        function base64ToBlob(base64, contentType) {
-            const byteCharacters = atob(base64);
-            const byteArrays = [];
-
-            for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-                const slice = byteCharacters.slice(offset, offset + 512);
-
-                const byteNumbers = new Array(slice.length);
-                for (let i = 0; i < slice.length; i++) {
-                    byteNumbers[i] = slice.charCodeAt(i);
-                }
-
-                const byteArray = new Uint8Array(byteNumbers);
-                byteArrays.push(byteArray);
-            }
-
-            return new Blob(byteArrays, { type: contentType });
-        }
+        downloadButton.addEventListener('click', function() {
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(pdfBlob);
+            link.download = 'output.pdf'; // This can be adjusted as needed
+            link.click();
+        });
     </script>
 </body>
 </html>
