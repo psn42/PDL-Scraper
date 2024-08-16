@@ -63,7 +63,7 @@ public class PdfController {
             }
 
             response.setContentType("application/pdf");
-            response.setHeader("Content-Disposition", "attachment; filename=\"" + name + ".pdf\"");
+            response.setHeader("Content-Disposition", "attachment; filename=" + name + ".pdf");
             document.save(response.getOutputStream());
         }
     }
