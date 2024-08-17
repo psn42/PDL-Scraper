@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.pdl.scraper.DocumentDetails;
+
 import javax.imageio.ImageIO;
 import jakarta.servlet.http.HttpServletResponse;
 import java.awt.image.BufferedImage;
@@ -29,15 +31,11 @@ public class PdfController {
     private final ConcurrentMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     @PostMapping("/convert")
-    public void convert(@RequestParam("url") String url, HttpServletResponse response) throws Exception {
-        Document doc = Jsoup.connect(url).get();
-        String name = doc.select("div#honey").attr("title").trim();
-        int id = Integer.parseInt(url.substring(url.indexOf("ID=") + 3, url.indexOf("&", url.indexOf("ID="))));
-        int numberOfPages = Integer.parseInt(doc.select("form[name=searched] table.Displayable td:nth-of-type(4) b").text());
-
+    public void convert(@RequestParam String url, HttpServletResponse response) throws Exception {
+        DocumentDetails details = getDetails(url);
         try (PDDocument document = new PDDocument()) {
-            for (int i = 1; i <= numberOfPages; i++) {
-                String imageUrl = constructImageUrl(id, i);
+            for (int i = 1; i <= details.getNumberOfPages(); i++) {
+                String imageUrl = constructImageUrl(details.getId(), i);
                 BufferedImage bufferedImage;
 
                 try (InputStream in = new URL(imageUrl).openStream()) {
@@ -57,12 +55,12 @@ public class PdfController {
                     }
                     
                     bufferedImage = null;
-                    sendProgressUpdate(i, numberOfPages);
+                    sendProgressUpdate(i, details.getNumberOfPages());
                 }
             }
 
             response.setContentType("application/pdf");
-            response.setHeader("Content-Disposition", "attachment; filename=" + name + ".pdf");
+            response.setHeader("Content-Disposition", "attachment; filename=" + details.getName() + ".pdf");
             document.save(response.getOutputStream());
         }
     }
@@ -88,6 +86,20 @@ public class PdfController {
                 emitter.completeWithError(e);
             }
         });
+    }
+
+    private DocumentDetails getDetails(String url) throws Exception {
+        String newUrl = url;
+        if (url.contains("displayPageContent")) {
+            newUrl = url.replace("Content", "");
+        }
+        Document doc = Jsoup.connect(newUrl).get();
+        int id = Integer.parseInt(newUrl.substring(newUrl.indexOf("ID=") + 3, newUrl.indexOf("&", newUrl.indexOf("ID="))));
+        String name = doc.select("div#honey").attr("name").trim();
+        int numberOfPages = Integer.parseInt(doc.select("td[width='131']:contains(Pages) + td").text().trim());
+        String thumbnailUrl = doc.select("img[width='200'][height='200']").attr("src");
+        String thumbnail = "http://www.panjabdigilib.org/" + thumbnailUrl.substring(thumbnailUrl.indexOf("pdl")).trim();
+        return new DocumentDetails(id, name, numberOfPages, thumbnail);
     }
 
     private String constructImageUrl(int id, int page) {

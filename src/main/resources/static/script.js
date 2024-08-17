@@ -58,4 +58,5 @@ downloadButton.addEventListener('click', function() {
     link.href = window.URL.createObjectURL(pdfBlob);
     link.download = filename;
     link.click();
+    document.getElementById('convertButton').disabled = false;
 });
