@@ -1,6 +1,12 @@
 body {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/2/2b/19th_century_manuscript_copy%2C_1704_CE_Guru_Granth_Sahib%2C_Schoyen_Collection_Norway.jpg');
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: cover;
+    background-color: rgba(255,255,255,0.6);
+    /*background-color: #f7f7f7;*/
+    background-blend-mode: lighten;
     font-family: Arial, sans-serif;
-    background-color: #f7f7f7;
     display: flex;
     justify-content: center;
     align-items: center;
