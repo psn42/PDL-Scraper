@@ -35,11 +35,11 @@ public class PdfController {
         int id = Integer.parseInt(url.substring(url.indexOf("ID=") + 3, url.indexOf("&", url.indexOf("ID="))));
         int numberOfPages = Integer.parseInt(doc.select("form[name=searched] table.Displayable td:nth-of-type(4) b").text());
 
-        // Create PDF document
         try (PDDocument document = new PDDocument()) {
             for (int i = 1; i <= numberOfPages; i++) {
                 String imageUrl = constructImageUrl(id, i);
                 BufferedImage bufferedImage;
+
                 try (InputStream in = new URL(imageUrl).openStream()) {
                     bufferedImage = ImageIO.read(in);
                 }
@@ -50,14 +50,13 @@ public class PdfController {
                     PDRectangle pageSize = new PDRectangle(width, height);
                     PDPage page = new PDPage(pageSize);
                     document.addPage(page);
-
                     PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageToByteArray(bufferedImage), imageUrl);
+
                     try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
                         contentStream.drawImage(pdImage, 0, 0, width, height);
                     }
+                    
                     bufferedImage = null;
-
-                    // Notify frontend about progress
                     sendProgressUpdate(i, numberOfPages);
                 }
             }
