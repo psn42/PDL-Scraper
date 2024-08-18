@@ -9,8 +9,10 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -30,9 +32,15 @@ public class PdfController {
 
     private final ConcurrentMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
-    @PostMapping("/convert")
-    public void convert(@RequestParam String url, HttpServletResponse response) throws Exception {
+    @PostMapping("/details")
+    public String go(@RequestParam String url, Model model) throws Exception {
         DocumentDetails details = getDetails(url);
+        model.addAttribute("details", details);
+        return "details";
+    }
+
+    @PostMapping("/convert")
+    public void convert(@RequestBody DocumentDetails details, HttpServletResponse response) throws Exception {
         try (PDDocument document = new PDDocument()) {
             for (int i = 1; i <= details.getNumberOfPages(); i++) {
                 String imageUrl = constructImageUrl(details.getId(), i);

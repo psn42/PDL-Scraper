@@ -8,7 +8,9 @@ let pdfBlob;
 document.getElementById('pdfForm').addEventListener('submit', function(event) {
     event.preventDefault();
 
-    const url = document.getElementById('urlInput').value;
+    const id = document.getElementById('id').innerText;
+    const name = document.getElementById('name').innerText;
+    const numberOfPages = document.getElementById('numberOfPages').innerText;
 
     document.getElementById('convertButton').disabled = true;
     progressContainer.style.display = 'block';
@@ -26,16 +28,16 @@ document.getElementById('pdfForm').addEventListener('submit', function(event) {
         if (parseInt(currentPage) === parseInt(totalPages)) {
             eventSource.close();
             progressText.innerText = 'Completed';
-            downloadButton.style.display = 'block';
+            downloadButton.style.display = 'inline-block';
         }
     };
 
     fetch('/convert', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({ url: url })
+        body: JSON.stringify({ id, name, numberOfPages })
     })
     .then(response => {
         if (!response.ok) {
@@ -58,5 +60,4 @@ downloadButton.addEventListener('click', function() {
     link.href = window.URL.createObjectURL(pdfBlob);
     link.download = filename;
     link.click();
-    document.getElementById('convertButton').disabled = false;
 });

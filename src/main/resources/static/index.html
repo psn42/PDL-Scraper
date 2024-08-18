@@ -9,19 +9,10 @@
 <body>
     <div class="container">
         <h1><img src="img/PDL.png" style='height: 100%; width: 100%; object-fit: contain'/>Scraper</h1>
-        <form id="pdfForm">
-            <input type="text" id="urlInput" placeholder="Enter URL" required>
-            <button id="convertButton" type="submit">Convert to PDF</button>
+        <form id="urlForm" action="/details" method="post">
+            <input type="text" id="urlInput" name="url" placeholder="Enter URL" required>
+            <button id="convertButton" type="submit">Go</button>
         </form>
-        <div id="progressContainer">
-            <div id="progressBar">
-                <div id="progressFill"></div>
-            </div>
-            <div id="progressText">Waiting for conversion to start...</div>
-        </div>
-        <button id="downloadButton">Download PDF</button>
     </div>
-
-    <script src="/script.js"></script>
 </body>
 </html>

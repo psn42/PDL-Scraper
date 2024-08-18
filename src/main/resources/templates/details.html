@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Details</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Document Details</h2>
+        <img th:src="${details.thumbnail}" alt="Thumbnail" style="max-width: 100%;">
+        <p><strong>ID:</strong> <span id="id" th:text="${details.id}"></span></p>
+        <p><strong>Name:</strong> <span id="name" th:text="${details.name}"></span></p>
+        <p><strong>Number of Pages:</strong> <span id="numberOfPages" th:text="${details.numberOfPages}"></span></p>
+        <form id="pdfForm">
+            <button id="convertButton" type="submit">Convert to PDF</button>
+        </form>
+        <div id="progressContainer">
+            <div id="progressBar">
+                <div id="progressFill"></div>
+            </div>
+            <div id="progressText">Waiting for conversion to start...</div>
+        </div>
+        <div class="inline">
+            <button id="downloadButton">Download PDF</button>
+            <button id="homeButton" onclick="location.href='/'">Home</button>
+        </div>
+    </div>
+    <script src="/script.js"></script>
+</body>
+</html>
