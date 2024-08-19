@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,9 @@
 <body>
     <div class="container">
         <h1><img src="img/PDL.png" style='height: 100%; width: 100%; object-fit: contain'/>Scraper</h1>
+        <div id="errorMessage" style="color: red; display: block" th:if="${errorMessage != null}">
+            <p th:text="${errorMessage}"></p>
+        </div>
         <form id="urlForm" action="/details" method="post">
             <input type="text" id="urlInput" name="url" placeholder="Enter URL" required>
             <button id="convertButton" type="submit">Go</button>

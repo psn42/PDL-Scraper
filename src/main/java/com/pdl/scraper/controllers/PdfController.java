@@ -35,6 +35,10 @@ public class PdfController {
     @PostMapping("/details")
     public String go(@RequestParam String url, Model model) throws Exception {
         DocumentDetails details = getDetails(url);
+        if (details == null) {
+            model.addAttribute("errorMessage", "Invalid URL. Please try again.");
+            return "index";
+        }
         model.addAttribute("details", details);
         return "details";
     }
@@ -100,6 +104,9 @@ public class PdfController {
         String newUrl = url;
         if (url.contains("displayPageContent")) {
             newUrl = url.replace("Content", "");
+        }
+        if (!url.contains("displayPage")) {
+            return null;
         }
         Document doc = Jsoup.connect(newUrl).get();
         int id = Integer.parseInt(newUrl.substring(newUrl.indexOf("ID=") + 3, newUrl.indexOf("&", newUrl.indexOf("ID="))));
