@@ -5,7 +5,7 @@ const downloadButton = document.getElementById('downloadButton');
 let filename;
 let pdfBlob;
 
-document.getElementById('pdfForm').addEventListener('submit', function(event) {
+document.getElementById('pdfForm').addEventListener('submit', function (event) {
     event.preventDefault();
 
     const id = document.getElementById('id').innerText;
@@ -17,7 +17,7 @@ document.getElementById('pdfForm').addEventListener('submit', function(event) {
     downloadButton.style.display = 'none';
 
     const eventSource = new EventSource('/progress');
-    eventSource.onmessage = function(event) {
+    eventSource.onmessage = function (event) {
         const message = event.data;
         const [text, currentPage, of, totalPages] = message.split(' ');
         const progressPercentage = (parseInt(currentPage) / parseInt(totalPages)) * 100;
@@ -39,23 +39,23 @@ document.getElementById('pdfForm').addEventListener('submit', function(event) {
         },
         body: JSON.stringify({ id, name, numberOfPages })
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Failed to generate PDF');
-        }
-        filename = response.headers.get('Content-Disposition').split('filename=')[1];
-        return response.blob();
-    })
-    .then(blob => {
-        pdfBlob = blob;
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        document.getElementById('convertButton').disabled = false;
-    });
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to generate PDF');
+            }
+            filename = response.headers.get('Content-Disposition').split('filename=')[1];
+            return response.blob();
+        })
+        .then(blob => {
+            pdfBlob = blob;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('convertButton').disabled = false;
+        });
 });
 
-downloadButton.addEventListener('click', function() {
+downloadButton.addEventListener('click', function () {
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(pdfBlob);
     link.download = filename;

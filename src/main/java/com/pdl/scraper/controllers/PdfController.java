@@ -33,47 +33,32 @@ public class PdfController {
     private final ConcurrentMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     @PostMapping("/details")
-    public String go(@RequestParam String url, Model model) throws Exception {
-        DocumentDetails details = getDetails(url);
-        if (details == null) {
+    public String go(@RequestParam String url, Model model) {
+        try {
+            DocumentDetails details = getDetails(url);
+            model.addAttribute("details", details);
+            return "details";
+        } catch (Exception e) {
             model.addAttribute("errorMessage", "Invalid URL. Please try again.");
             return "index";
         }
-        model.addAttribute("details", details);
-        return "details";
     }
 
     @PostMapping("/convert")
-    public void convert(@RequestBody DocumentDetails details, HttpServletResponse response) throws Exception {
+    public void convert(@RequestBody DocumentDetails details, HttpServletResponse response) {
         try (PDDocument document = new PDDocument()) {
             for (int i = 1; i <= details.getNumberOfPages(); i++) {
-                String imageUrl = constructImageUrl(details.getId(), i);
-                BufferedImage bufferedImage;
-
-                try (InputStream in = new URL(imageUrl).openStream()) {
-                    bufferedImage = ImageIO.read(in);
-                }
-
+                BufferedImage bufferedImage = loadImage(constructImageUrl(details.getId(), i));
                 if (bufferedImage != null) {
-                    float width = bufferedImage.getWidth();
-                    float height = bufferedImage.getHeight();
-                    PDRectangle pageSize = new PDRectangle(width, height);
-                    PDPage page = new PDPage(pageSize);
-                    document.addPage(page);
-                    PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageToByteArray(bufferedImage), imageUrl);
-
-                    try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-                        contentStream.drawImage(pdImage, 0, 0, width, height);
-                    }
-                    
-                    bufferedImage = null;
+                    addPageToDocument(document, bufferedImage);
                     sendProgressUpdate(i, details.getNumberOfPages());
                 }
             }
-
             response.setContentType("application/pdf");
             response.setHeader("Content-Disposition", "attachment; filename=" + details.getName() + ".pdf");
             document.save(response.getOutputStream());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -82,10 +67,8 @@ public class PdfController {
         SseEmitter emitter = new SseEmitter();
         String emitterId = String.valueOf(emitter.hashCode());
         emitters.put(emitterId, emitter);
-
         emitter.onCompletion(() -> emitters.remove(emitterId));
         emitter.onTimeout(() -> emitters.remove(emitterId));
-
         return emitter;
     }
 
@@ -101,24 +84,37 @@ public class PdfController {
     }
 
     private DocumentDetails getDetails(String url) throws Exception {
-        String newUrl = url;
-        if (url.contains("displayPageContent")) {
-            newUrl = url.replace("Content", "");
-        }
-        if (!url.contains("displayPage")) {
-            return null;
-        }
+        String newUrl = url.contains("displayPageContent") ? url.replace("Content", "") : url;
+        if (!newUrl.contains("displayPage")) throw new Exception();
+
         Document doc = Jsoup.connect(newUrl).get();
         int id = Integer.parseInt(newUrl.substring(newUrl.indexOf("ID=") + 3, newUrl.indexOf("&", newUrl.indexOf("ID="))));
         String name = doc.select("div#honey").attr("name").trim();
         int numberOfPages = Integer.parseInt(doc.select("td[width='131']:contains(Pages) + td").text().trim());
-        String thumbnailUrl = doc.select("img[width='200'][height='200']").attr("src");
-        String thumbnail = "http://www.panjabdigilib.org/" + thumbnailUrl.substring(thumbnailUrl.indexOf("pdl")).trim();
-        return new DocumentDetails(id, name, numberOfPages, thumbnail);
+        String thumbnailUrl = "http://www.panjabdigilib.org/" + doc.select("img[width='200'][height='200']").attr("src").substring(4).trim();
+
+        return new DocumentDetails(id, name, numberOfPages, thumbnailUrl);
     }
 
     private String constructImageUrl(int id, int page) {
         return "http://www.panjabdigilib.org/images?ID=" + id + "&page=" + page + "&pagetype=1&Searched=1234";
+    }
+
+    private BufferedImage loadImage(String imageUrl) throws Exception {
+        try (InputStream in = new URL(imageUrl).openStream()) {
+            return ImageIO.read(in);
+        }
+    }
+
+    private void addPageToDocument(PDDocument document, BufferedImage bufferedImage) throws Exception {
+        PDRectangle pageSize = new PDRectangle(bufferedImage.getWidth(), bufferedImage.getHeight());
+        PDPage page = new PDPage(pageSize);
+        document.addPage(page);
+        PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageToByteArray(bufferedImage), null);
+
+        try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+            contentStream.drawImage(pdImage, 0, 0, pageSize.getWidth(), pageSize.getHeight());
+        }
     }
 
     private byte[] imageToByteArray(BufferedImage bufferedImage) throws Exception {
